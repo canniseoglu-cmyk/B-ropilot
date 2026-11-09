@@ -1,0 +1,22 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
+const html=fs.readFileSync(path.join(__dirname,'CSV_Pruefung_und_Sammelimport_OFFLINE.html'),'utf8');
+const js=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const fake={addEventListener(){},files:[],disabled:false,textContent:''};
+const ctx={document:{getElementById(){return fake}},Blob:function(){},URL:{createObjectURL(){},revokeObjectURL(){}},setTimeout(){},console};vm.createContext(ctx);vm.runInContext(js,ctx);
+let pass=0;function test(label,fn){try{fn();pass++;console.log('PASS',label)}catch(e){console.error('FAIL',label,e.message);process.exitCode=1}}
+const h=Array.from(vm.runInContext("HEADERS",ctx));const row=['BP-TEST-001','2026-11-09','Max Test','max@example.invalid','E-Mail','Heizung','Wartung','Normal','Keine Gefahr erkennbar – manuell geprüft','A. Test','Neu','Rückmeldung','2026-11-10','','Nein','Sicherheitsprüfung dokumentiert durch: A. Test'];
+const file=(name,rows)=>({name,text:ctx.serialize([h,...rows])});
+test('CSV-Parsing roundtrip 16 Spalten',()=>assert.deepEqual(Array.from(ctx.parseCSV(file('a',[row]).text)[1]),row));
+test('Semikolon und Anführungszeichen',()=>{let r=[...row];r[6]='Text; "Zitat"';assert.equal(ctx.parseCSV(file('a',[r]).text)[1][6],r[6])});
+test('Zeilenumbruch in quoted field',()=>{let r=[...row];r[6]='erste\nzweite';assert.equal(ctx.parseCSV(file('a',[r]).text)[1][6],r[6])});
+test('Gültige Zeile akzeptiert',()=>assert.equal(ctx.validateSets([file('a',[row])]).good.length,1));
+test('Duplikat über Dateien blockiert',()=>assert.equal(ctx.validateSets([file('a',[row]),file('b',[row])]).errors.length,1));
+test('Falsche Kopfzeile blockiert',()=>{let x=file('a',[row]);x.text=x.text.replace('Vorgangs-ID','Falsche-ID');assert.equal(ctx.validateSets([x]).errors.length,1)});
+test('Fehlende Pflichtangabe blockiert',()=>{let r=[...row];r[2]='';assert.equal(ctx.validateSets([file('a',[r])]).errors.length,1)});
+test('Unzulässige Terminbestätigung blockiert',()=>{let r=[...row];r[14]='Ja';assert.equal(ctx.validateSets([file('a',[r])]).errors.length,1)});
+test('Offene Sicherheitsprüfung warnt',()=>{let r=[...row];r[8]='OFFEN – manuell prüfen';assert.equal(ctx.validateSets([file('a',[r])]).warnings.length,1)});
+test('Ungültiger Sicherheitsstatus blockiert',()=>{let r=[...row];r[8]='OK';assert.equal(ctx.validateSets([file('a',[r])]).errors.length,1)});
+test('Fehlende Prüfperson blockiert',()=>{let r=[...row];r[15]='';assert.equal(ctx.validateSets([file('a',[r])]).errors.length,1)});
+test('CSV-Formel neutralisiert',()=>{let r=[...row];r[2]='=1+1';assert.ok(ctx.serialize([h,r]).includes("'\u003d1+1"))});
+test('Nicht geschlossene CSV-Quotes blockiert',()=>assert.throws(()=>ctx.parseCSV('"offen')));
+console.log(`${pass}/13 Tests bestanden`);if(pass!==13)process.exitCode=1;

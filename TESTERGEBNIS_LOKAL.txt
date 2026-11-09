@@ -1,0 +1,18 @@
+Befehl: npm test (entspricht node TECHNISCHE_TESTS.js)
+Exit-Code: 0
+PASS CSV-Parsing roundtrip 16 Spalten
+PASS Semikolon und Anführungszeichen
+PASS Zeilenumbruch in quoted field
+PASS Gültige Zeile akzeptiert
+PASS Duplikat über Dateien blockiert
+PASS Falsche Kopfzeile blockiert
+PASS Fehlende Pflichtangabe blockiert
+PASS Unzulässige Terminbestätigung blockiert
+PASS Offene Sicherheitsprüfung warnt
+PASS Ungültiger Sicherheitsstatus blockiert
+PASS Fehlende Prüfperson blockiert
+PASS CSV-Formel neutralisiert
+PASS Nicht geschlossene CSV-Quotes blockiert
+13/13 Tests bestanden
+
+Grenze: isolierte Logiktests, keine echten Browser-/Excel-Tests.

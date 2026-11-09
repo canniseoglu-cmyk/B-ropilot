@@ -1,0 +1,23 @@
+BüroPilot Starter V7 – interner technischer Prüfbericht
+========================================================
+Neu: Offline-CSV-Prüfung und Sammelimport (HTML). Originale V6-Dateien unverändert.
+
+Sicherheits- und Produktgrenzen:
+- Keine Übertragung, Speicherung oder Synchronisierung mit einem Server.
+- Mehrere Formular-CSV-Dateien können auf Struktur, Duplikate innerhalb der Auswahl und Sicherheitsstatus geprüft werden.
+- Fehler in einer Datei blockieren den gesamten Sammel-Export (fail closed).
+- Bereits in der Excel-Arbeitsmappe vorhandene IDs können NICHT erkannt werden.
+- Kein automatisches Einfügen in die Excel-Arbeitsmappe; Import bleibt manuell.
+- CSV-Formel-Injektion wird beim Export neutralisiert; externe Excel-Importkonfiguration ist zusätzlich zu prüfen.
+- Sicherheitsstatus wird nur strukturell geprüft; Notfälle können nicht zuverlässig automatisch erkannt werden.
+- Datenschutzrechtliche Prüfung, realer Zielgeräte-/Excel-Importtest und fachliche Kundenabnahme fehlen.
+- Alle bisherigen Kundennamen und Testfälle sind fiktiv.
+
+Q-GATE: GESCHLOSSEN – keine Freigabe zur echten Kundenverarbeitung oder Kundenauslieferung.
+Kosten: keine externen Ausgaben; Umsatz: 0 Euro.
+
+Automatisierte Tests (Node.js, isolierte JavaScript-Umgebung): 13/13 bestanden.
+Geprüft: CSV-Roundtrip, Sonderzeichen, Zeilenumbruch, gültige Daten,
+Duplikate, Kopfzeilen, Pflichtfelder, Terminstatus, Sicherheitswarnungen,
+Sicherheitsstatus, Prüfperson, Formelinjektion, fehlerhafte Quotes.
+Kein realer Safari- oder Excel-End-to-End-Test.

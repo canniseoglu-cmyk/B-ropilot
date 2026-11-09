@@ -1,0 +1,1 @@
+{"name":"bueropilot-starter","version":"0.7.0","private":true,"description":"Offline prototype; not approved for customer use","scripts":{"test":"node TECHNISCHE_TESTS.js"},"engines":{"node":">=18"}}
