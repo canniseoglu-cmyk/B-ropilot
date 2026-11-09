@@ -3,7 +3,7 @@ const html=fs.readFileSync(path.join(__dirname,'CSV_Pruefung_und_Sammelimport_OF
 const js=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const fake={addEventListener(){},files:[],disabled:false,textContent:''};
 const ctx={document:{getElementById(){return fake}},Blob:function(){},URL:{createObjectURL(){},revokeObjectURL(){}},setTimeout(){},console};vm.createContext(ctx);vm.runInContext(js,ctx);
-let pass=0;function test(label,fn){try{fn();pass++;console.log('PASS',label)}catch(e){console.error('FAIL',label,e.message);process.exitCode=1}}
+let pass=0,total=0;function test(label,fn){total++;try{fn();pass++;console.log('PASS',label)}catch(e){console.error('FAIL',label,e.message);process.exitCode=1}}
 const h=Array.from(vm.runInContext("HEADERS",ctx));const row=['BP-TEST-001','2026-11-09','Max Test','max@example.invalid','E-Mail','Heizung','Wartung','Normal','Keine Gefahr erkennbar – manuell geprüft','A. Test','Neu','Rückmeldung','2026-11-10','','Nein','Sicherheitsprüfung dokumentiert durch: A. Test'];
 const file=(name,rows)=>({name,text:ctx.serialize([h,...rows])});
 test('CSV-Parsing roundtrip 16 Spalten',()=>assert.deepEqual(Array.from(ctx.parseCSV(file('a',[row]).text)[1]),row));
@@ -19,4 +19,16 @@ test('Ungültiger Sicherheitsstatus blockiert',()=>{let r=[...row];r[8]='OK';ass
 test('Fehlende Prüfperson blockiert',()=>{let r=[...row];r[15]='';assert.equal(ctx.validateSets([file('a',[r])]).errors.length,1)});
 test('CSV-Formel neutralisiert',()=>{let r=[...row];r[2]='=1+1';assert.ok(ctx.serialize([h,r]).includes("'\u003d1+1"))});
 test('Nicht geschlossene CSV-Quotes blockiert',()=>assert.throws(()=>ctx.parseCSV('"offen')));
-console.log(`${pass}/13 Tests bestanden`);if(pass!==13)process.exitCode=1;
+
+for(const value of ['2026-02-29','2026-02-30','2026-04-31','0000-01-01','2026-13-01'])test('Ungültiges Kalenderdatum '+value,()=>{let r=[...row];r[1]=value;assert.equal(ctx.validateSets([file('a',[r])]).good.length,0)});
+test('Schaltjahr akzeptiert',()=>{let r=[...row];r[1]='2024-02-29';assert.equal(ctx.validateSets([file('a',[r])]).good.length,1)});
+for(const index of [12,13])for(const value of ['2026-02-30','2026-11-08'])test('Folgedatum blockiert '+index+' '+value,()=>{let r=[...row];r[index]=value;assert.equal(ctx.validateSets([file('a',[r])]).good.length,0)});
+for(const value of ['Sicherheitsprüfung dokumentiert durch: ','Sicherheitsprüfung dokumentiert durch:   ','Text Sicherheitsprüfung dokumentiert durch: A'])test('Leere oder falsche Prüfperson blockiert '+JSON.stringify(value),()=>{let r=[...row];r[15]=value;assert.equal(ctx.validateSets([file('a',[r])]).good.length,0)});
+for(const value of ['"abc"suffix;def','"abc"";def'])test('Ungültige CSV-Syntax '+value,()=>assert.throws(()=>ctx.parseCSV(value)));
+for(const value of ['=1+1','+SUM(A1)','-1+2','@SUM(A1)',' \t=1','\uFEFF=1','\r\n=1'])test('Formelpräfix entschärft '+JSON.stringify(value),()=>assert.ok(ctx.safeCell(value).startsWith('"\'')));
+test('Unicode, BOM, Quotes und CRLF bleiben erhalten',()=>{let r=[...row];r[6]='Ä Ö ß 😀; "Text"\r\nZeile';const parsed=ctx.parseCSV(file('unicode',[r]).text);assert.equal(parsed[1][6],'Ä Ö ß 😀; "Text"\nZeile');assert.equal(parsed[0][0],h[0])});
+test('Steuerzeichen werden entfernt',()=>assert.equal(ctx.safeCell('a\u0000b\u000bc'),'"abc"'));
+test('Duplikate innerhalb einer Datei blockiert',()=>assert.equal(ctx.validateSets([file('a',[row,row])]).errors.length,1));
+test('Falsche Spaltenzahl blockiert',()=>assert.equal(ctx.validateSets([file('a',[row.slice(0,15)])]).errors.length,1));
+test('Originaldateien werden nicht verändert',()=>{const input=file('a',[row]);const original=input.text;ctx.validateSets([input]);assert.equal(input.text,original)});
+console.log(`${pass}/${total} Tests bestanden`);if(pass!==total)process.exitCode=1;
